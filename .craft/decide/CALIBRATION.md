@@ -1,6 +1,6 @@
 # decide/CALIBRATION.md — earning the right to trust a number
 
-**Version 2.2** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
+**Version 3.0** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
 
 > **Do not load this file for a normal coding task.** It specifies a runtime, not your behaviour.
 
@@ -18,7 +18,19 @@ This does **not** mean there is a 96% chance that editing is the right move. It 
 
 Language-model token probabilities are routinely overconfident, and the gap is not uniform — it varies by model, by decision, by prompt version, and by how the answer space was ordered. A raw logprob is a **signal with unknown units**.
 
-Calibration is the process of converting that signal into something a policy can act on. Until it has been done:
+## Three things that all look like "confidence"
+
+Keep these words apart. Using them interchangeably is how an unvalidated number ends up authorising an action.
+
+| Term | What it is | May drive autonomy |
+|---|---|---|
+| **model preference** | a raw logprob or score over labels — a statement about token likelihood | no |
+| **provider confidence** | what a given provider reports, on its own scale, however derived | no |
+| **calibrated probability** | a preference mapped to observed accuracy **on your workload**, per decision, per provider | yes, within `POLICY.md` |
+
+Only the third is a probability of being right. The first two are inputs to producing it. A system that reports `0.95` without saying which of the three it means is reporting nothing.
+
+Calibration is the process of converting the first into the third. Until it has been done:
 
 > A threshold without calibration data is a guess with a decimal point.
 
@@ -33,10 +45,12 @@ One record per decision. This is the raw material; without it, nothing below is 
 ```text
 task_id
 decision_id + version          route.next/v2
+policy_version                 policy/v1 — thresholds and rules in force
+provider_tier                  A | B | C  (PROVIDERS.md §2)
 state_hash
 provider + model + version
 answer
-distribution                   if available
+distribution                   if available; absent is a valid, meaningful value
 policy_outcome                 acted | validated | escalated | asked_human | blocked
 executed_action
 action_result                  observed outcome, not intent
@@ -111,7 +125,63 @@ Automation rate and accuracy trade against each other. Raising the threshold aut
 
 ---
 
-# 6. Using telemetry honestly
+# 6. Rolling out: shadow mode and the autonomy ladder
+
+Never wire a fresh classifier straight to write access. You have no evidence it works, and the first thing it does wrong will be the thing you were not watching.
+
+## Shadow mode
+
+The layer decides, the runtime records the decision, and **something else actually acts** — System 2, or a human. Nothing the fast layer chooses is executed.
+
+```text
+state → fast decision → LOG
+                         ↕  compared against
+                        System 2 / human decision → EXECUTED
+```
+
+This is free ground truth on the decisions you actually face, gathered before anything can go wrong. Run it until the numbers in §4 are stable per decision — not until it feels right.
+
+## The ladder
+
+Autonomy is earned one rung at a time, per decision, on measured agreement. Never skip rungs.
+
+| Rung | The layer may | Promote when |
+|---|---|---|
+| **0 — shadow** | decide and log only; nothing executes | agreement is measured and stable |
+| **1 — recommend** | propose the next step; System 2 or the human confirms each one | confirmations become routine agreement |
+| **2 — read-only** | execute read, search, list, history unsupervised | no wrong read-only routing at the chosen threshold |
+| **3 — diagnostics** | also run tests, typecheck, lint, build | false-auto-action rate holds at the target |
+| **4 — reversible edits** | also make low-risk reversible edits under `POLICY.md` | sustained, with human override rate low |
+
+Above rung 4 there is no rung: class R, irreversible operations and STOP conditions are governed by Craft and are not on this ladder at any level of evidence (`POLICY.md` §4).
+
+**Demote on regression.** A rise in false-auto-action rate or human override rate drops the ladder a rung until it is re-measured. Promotion is earned; demotion is automatic.
+
+---
+
+# 7. Is the layer actually paying off?
+
+Accuracy tells you the decisions are good. It does not tell you the layer is worth having. Measure the system, not just the classifier — otherwise you will optimise a component that is quietly making the whole thing worse.
+
+Compare against a baseline run with the layer **disabled**, on comparable tasks:
+
+| Should fall | Should not move | Should rise |
+|---|---|---|
+| reasoning / System 2 calls per task | task completion rate | — |
+| total tokens per task | Craft gate pass rate | — |
+| tool calls per task | correctness, regressions found later | — |
+| retries per task | human override rate | — |
+| wall-clock latency per task | count of wrong actions taken | — |
+
+The one rule that governs all of it:
+
+> **Token savings are not a win if Craft quality drops.** A layer that cuts cost by 40% while increasing regressions, failed gates or human corrections has not made the agent cheaper — it has moved the cost somewhere that this dashboard does not show.
+
+Report the pair together or not at all. A cost number without the quality number beside it is a marketing figure, and `../04-STANDARD.md` §9 rejects exactly that kind of claim.
+
+---
+
+# 8. Using telemetry honestly
 
 | Use it for | Not for |
 |---|---|
@@ -124,7 +194,7 @@ Automation rate and accuracy trade against each other. Raising the threshold aut
 
 ---
 
-# 7. Drift
+# 9. Drift
 
 Recalibrate whenever any of these changes:
 
@@ -139,12 +209,12 @@ Between recalibrations, monitor the two numbers that reveal drift earliest: **fa
 
 ---
 
-# 8. If none of this is measured
+# 10. If none of this is measured
 
 That is a legitimate position, and the common one. The honest configuration is then:
 
 ```text
-conservative profile          no numeric thresholds
+Tier B or C                    no numeric thresholds
 words, not numbers            clear | unsure | contested
 mutations                     always through System 2
 completion                    always through 03-GATE.md

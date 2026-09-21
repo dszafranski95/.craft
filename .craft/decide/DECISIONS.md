@@ -1,6 +1,6 @@
 # decide/DECISIONS.md — the decision catalogue
 
-**Version 2.2** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
+**Version 3.0** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
 
 > **Do not load this file for a normal coding task.** It specifies a runtime, not your behaviour.
 > Read it when you are building or integrating a fast decision provider.
@@ -45,6 +45,7 @@ A `score` is an ordinal band with named levels, not a number. `risk = 2.7` means
 5. **Criteria are behavioural, not vibes.** "Use `inspect` when the next safe change cannot be named from current evidence" is a criterion. "Use `inspect` when more context would be helpful" is not.
 6. **A decision never mutates state.** It reads state and returns an answer. The runtime applies the consequence (`POLICY.md`).
 7. **Deterministic questions are not decisions.** If the runtime can compute the answer, it computes it (`../05-DECIDE.md` §12).
+8. **One decision authorises at most one bounded action.** Never a plan of several steps executed before any of their results are seen. The next decision is taken against the state the previous action actually produced (`../05-DECIDE.md` §2), and anything that mutates additionally needs an action envelope (`POLICY.md` §5).
 
 ---
 
@@ -150,6 +151,8 @@ This decision is the mechanical form of Craft law 1 — *understand before you w
 2. something has changed that could plausibly change the outcome — a file edited, an environment variable set, a dependency installed.
 
 If nothing changed, the answer is `no` regardless of how transient the failure looked. A retry with an unchanged diagnosis is a loop.
+
+**Classify the failure first.** The answer follows almost mechanically from the failure class — transient failures may be re-run, deterministic ones never can. The taxonomy is in `../05-DECIDE.md` §8.1, and wherever the runtime can classify a failure from its exit code or error signature, **it must do so and not ask** (§2 rule 7).
 
 **Default:** `no`.
 

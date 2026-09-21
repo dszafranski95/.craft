@@ -1,6 +1,6 @@
 # 01-CARD.md — Craft working card (always loaded)
 
-**Version 2.2** · This is the **only** Craft file that should be in context by default.
+**Version 3.0** · This is the **only** Craft file that should be in context by default.
 `02-PROTOCOL.md`, `03-GATE.md`, `04-STANDARD.md` and `05-DECIDE.md` are loaded on demand — routing rules in `00-START.md` §3.
 If this card and a full file disagree, **the full file wins**. This card is a map, not a replacement.
 
@@ -75,6 +75,8 @@ Answer every question at the cheapest level that answers it **correctly**. More 
 | **E0** | not checked | "Not verified: `<what>` — `<why>`" |
 
 Never write a command you did not run. "All tests pass" needs E2/E3 for the **whole** suite. *(`PROTOCOL` §8)*
+
+**Evidence expires.** A check that ran before your last edit describes code that no longer exists — re-run it. Verify last, then report. *(`GATE` §17.1)*
 
 ## Completion report
 

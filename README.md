@@ -72,6 +72,7 @@ Craft tells the assistant to:
 - stop instead of guessing about dangerous changes;
 - test important changes;
 - show real evidence before saying the work is done;
+- re-run its checks after the last edit, not before it;
 - keep unrelated code untouched.
 
 ## Why there are six files
@@ -116,11 +117,21 @@ The rule this never breaks: **being confident is not the same as having checked.
 
 Full detail is in [`.craft/05-DECIDE.md`](.craft/05-DECIDE.md). You do not need to configure any of it.
 
-### If you are building your own agent
+One more rule worth knowing, because it catches a mistake almost everyone makes: **a check expires the moment you change the code it checked.** If the assistant runs the tests and then edits one more line, that test result is history, not proof — it has to run them again. So verification comes last, right before the report.
 
-[`.craft/decide/`](.craft/decide/) specifies the same layer as an implementable contract: the decision catalogue, the state payload, the policy rules, the provider interface, and how to calibrate a confidence threshold before trusting it.
+### Two ways to use Craft
 
-It is deliberately provider-neutral — a local model, a hosted one, or a dedicated classifier all satisfy it. Craft defines the contract; the provider implements it. If you are not building a runtime, ignore this folder entirely.
+|  | **Basic Craft** | **Craft + Fast Decision Runtime** |
+|---|---|---|
+| For | any assistant that can read files | tool-using agents you build yourself |
+| Needs | nothing installed, nothing to run | your own runtime code |
+| You read | the six numbered files | those, plus [`.craft/decide/`](.craft/decide/) |
+
+Basic Craft is the whole product for almost everyone, and it has not changed: copy a folder, paste a prompt.
+
+[`.craft/decide/`](.craft/decide/) is for the second case. It specifies the same layer as an implementable contract — the decision catalogue, the state payload, the policy rules, the provider interface, and how to calibrate a confidence threshold before trusting it, including a shadow mode for rolling it out without letting an unproven classifier touch your code.
+
+It is deliberately provider-neutral: a local model, a hosted one, or a dedicated classifier all satisfy it. Craft defines the contract; the provider implements it. If you are not building a runtime, ignore this folder entirely.
 
 ## Optional short prompt
 
@@ -183,5 +194,7 @@ Yes. Use the Project-local section in `00-START.md` for repository-specific comm
 ## Updating
 
 To update Craft later, download the newest version and replace the contents of your project's `.craft` folder. Keep a copy of your Project-local section first, then add it back to the new `00-START.md`.
+
+**Upgrading from Craft 2.x:** replace the whole folder rather than copying individual files. Section numbers in `03-GATE.md` moved, so a note or prompt of your own that cites something like "GATE §18" needs re-checking. Nothing about how you use Craft changed — same folder, same prompt.
 
 That is all: copy one folder, paste one prompt, and work normally.

@@ -1,6 +1,6 @@
 # 04-STANDARD.md — The Craft Code Standard
 
-**Version 2.2** — universal engineering standard for human- and AI-written production code.
+**Version 3.0** — universal engineering standard for human- and AI-written production code.
 
 > This document defines **what good code is** and **why**.
 > `02-PROTOCOL.md` defines **how to work**. `03-GATE.md` defines **how to prove it**. `01-CARD.md` is the always-loaded summary.

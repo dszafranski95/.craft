@@ -1,6 +1,6 @@
 # 00-START.md — Craft Code Standard: entry point
 
-**Version 2.2** · Read this file first. It routes everything else.
+**Version 3.0** · Read this file first. It routes everything else.
 
 ---
 
@@ -63,17 +63,17 @@ If `.craft/` cannot be read, say so in one line and stop. Never reconstruct the 
 
 # 3. Routing procedure
 
-The standard is six files plus one optional folder. **Do not load all of them by default** — loading ~2,350 lines for a typo is exactly the ceremony this standard rejects.
+The standard is six files plus one optional folder. **Do not load all of them by default** — loading ~2,450 lines for a typo is exactly the ceremony this standard rejects.
 
 | File | Size | Role | Loaded |
 |---|---|---|---|
 | `00-START.md` | ~200 | routing only | always |
 | `01-CARD.md` | ~110 | laws, STOP list, authority order, decision loop, evidence levels, section index | always |
 | `02-PROTOCOL.md` | ~470 | how to work: recon, implementation, AS-01…AS-20, reporting | when changing code |
-| `03-GATE.md` | ~530 | how to prove it: triage, gates, evidence table, done | before claiming done |
+| `03-GATE.md` | ~550 | how to prove it: triage, gates, evidence table, done | before claiming done |
 | `04-STANDARD.md` | ~670 | what good code is: complexity, canon, principles | design & review |
-| `05-DECIDE.md` | ~370 | how to spend thinking: fast vs deep, anti-loop, autonomy | when looping or escalating |
-| `decide/` | ~830 | runtime contract for a fast decision provider | only when building one |
+| `05-DECIDE.md` | ~440 | how to spend thinking: fast vs deep, anti-loop, autonomy | when looping or escalating |
+| `decide/` | ~1050 | runtime contract for a fast decision provider | only when building one |
 
 Deterministic. Follow in order; stop at the first match.
 
@@ -119,7 +119,9 @@ If **any** of these is true, the change is **class R** regardless of how small i
 
 Design conversations, architecture questions and "should we do X?" load `04-STANDARD.md` regardless of class — that is the file that answers *why*.
 
-`05-DECIDE.md` is **not** part of any class tier. The decision loop it describes is on the card; load the file itself only when the loop is failing — you are repeating an action, a check keeps failing the same way, five steps have passed with no new fact — or when the human asks about agent autonomy. Load `decide/` only when building an agent runtime.
+`05-DECIDE.md` is **not** part of any class tier, and it is **capability-gated**. If you cannot run tools — a plain chat that only reads and writes text — you have no decision loop to govern, and this file never applies to you. Craft works exactly as before.
+
+If you do run tools in a loop, the loop itself is on the card. Load the file only when that loop is failing — you are repeating an action, a check keeps failing the same way, five steps have passed with no new fact — or when the human asks about agent autonomy. Load `decide/` only when building an agent runtime.
 
 ### Step 5 — Declare the decision in one line
 

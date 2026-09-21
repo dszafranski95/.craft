@@ -1,6 +1,6 @@
 # 02-PROTOCOL.md — Craft Engineering Protocol
 
-**Version 2.2** — mandatory operating instructions for coding agents.
+**Version 3.0** — mandatory operating instructions for coding agents.
 
 > This is the operational file: **how to work**. `04-STANDARD.md` says what good code is; `03-GATE.md` says how to prove it; `01-CARD.md` is the always-loaded summary.
 > Conflicts are resolved by the authoritative order in `04-STANDARD.md` §1.2 — not by preference.
@@ -459,7 +459,7 @@ This file is intentionally generic and is one of six:
 | `05-DECIDE.md` | how to spend thinking; anti-loop and autonomy | when looping or escalating |
 | `00-START.md` / platform loader | routing only | always |
 
-**Do not load the whole set by default.** Loading 2,350 lines for a one-line fix is the same category of waste as the over-engineering this file forbids. The routing procedure lives in `00-START.md` §3 and is deterministic: classify the change (T / S / R), load the tier, escalate immediately if a mandatory trigger fires mid-task, and never re-read a file already in context.
+**Do not load the whole set by default.** Loading 2,450 lines for a one-line fix is the same category of waste as the over-engineering this file forbids. The routing procedure lives in `00-START.md` §3 and is deterministic: classify the change (T / S / R), load the tier, escalate immediately if a mandatory trigger fires mid-task, and never re-read a file already in context.
 
 Working from memory is acceptable only for the card's ten laws. A specific gate, an AS-rule, a threshold or the report format is **read, not recalled** — and cited by anchor (`PROTOCOL` AS-12, `GATE` §8) so it can be checked.
 

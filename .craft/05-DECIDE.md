@@ -1,6 +1,6 @@
 # 05-DECIDE.md — Craft Fast Decision Layer
 
-**Version 2.2** · How an agent decides **what to do next** — cheaply when the choice is simple, deeply when it is not.
+**Version 3.0** · How an agent decides **what to do next** — cheaply when the choice is simple, deeply when it is not.
 
 > `04-STANDARD.md` says what good code is. `02-PROTOCOL.md` says how to work. `03-GATE.md` says how to prove it.
 > This file says **how to spend thinking**. It adds no engineering rule and it relaxes none.
@@ -82,6 +82,57 @@ next: inspect · read src/auth/session.ts · why: token owner still unknown
 ```
 
 **Do not narrate it.** Craft's one line of ceremony is the routing declaration in `00-START.md` §3 Step 5. Surface a decision only when you escalate, when you stop, or when asked.
+
+**One decision authorises one bounded action.** Not "inspect the repo, edit the files, run the migration and deploy". One step, then a real result, then a new decision against the updated state. A plan that runs four actions before looking at any of their outcomes is not four decisions — it is one guess with four chances to be wrong.
+
+## 2.1 A worked example
+
+Task: *"users get logged out after the access token refreshes."*
+
+```text
+route            auth → class R (00-START §3 Step 2)
+
+state            goal: session survives a refresh
+                 unknowns: why does /api/me 401 after a successful refresh?
+
+decide           unknowns exist, options are read-only → fast, no deep thinking
+act              batch: read auth/session.ts · grep setAccessToken · read refresh spec
+                 (§10 — three independent probes, one step)
+
+state            fact: refresh returns 200            (observed)
+                 fact: token written to session store (auth/session.ts:31)
+                 unknown: does the API client see it?
+
+decide           still an unknown, still read-only → fast
+act              read api/client.ts
+
+state            fact: client caches the header at construction (api/client.ts:41)
+                 → two sources now explain the bug differently
+
+decide           contradiction + class R + ownership question → ESCALATE (§7)
+System 2         canonical owner is auth/session.ts. Patching the client to
+                 re-read the store would create a second source of truth.
+                 Next: make the client read the token per request.
+                 state patch: constraint "token ownership stays in session.ts"
+
+decide           evidence.enough_to_edit = yes → edit, per the System 2 design
+act              edit api/client.ts
+
+decide           behaviour changed → test
+act              run auth suite → 1 failed
+
+decide           retry.allowed? nothing changed since the run → NO (§8)
+                 deterministic failure, not transient → diagnose, do not re-run
+act              read the failure → fixture pins the old header shape
+
+act              fix fixture → re-run → pass → typecheck → pass
+                 (checks run last, after the final edit — 03-GATE §17.1)
+
+decide           completion.ready_for_gate = yes
+gate             03-GATE: applicable BLOCKERs, E2 evidence, report
+```
+
+Two things to notice. The expensive model ran **once**, on the only question that needed judgement. And the failed test produced a diagnosis, not a second attempt.
 
 ---
 
@@ -219,6 +270,24 @@ A replan must change *what* is being attempted, not just the arguments. Re-runni
 
 If two replans in a row produce no new fact, the honest move is `ask_user` with the precise question. Stopping with a good question is a success (`01-CARD`).
 
+## 8.1 Classify the failure before reacting to it
+
+"Should I retry?" is unanswerable in the abstract and obvious once the failure is named. Name it first.
+
+| Failure | What it means | Correct response |
+|---|---|---|
+| **transient** | network blip, flaky infrastructure, lock contention | bounded retry with backoff — the only kind that may be re-run unchanged |
+| **deterministic** | compile error, type error, assertion failure, bad syntax | **never re-run.** It will fail identically. Read it and fix the cause |
+| **permission** | 401, 403, missing credential, read-only filesystem | retry cannot help. Either the scope is wrong or it is a STOP (`01-CARD`) |
+| **missing information** | file not found, unset env var, absent config | find or ask. Do not invent the value (`02-PROTOCOL.md` §2) |
+| **environment** | wrong runtime version, missing binary, no database | report it; it is usually outside the task's scope |
+| **tool** | the tool itself errored or returned nothing usable | try a different tool, not the same one again |
+| **plan** | the command worked, but the result shows the approach is wrong | System 2 replan. This is the one that masquerades as the others |
+
+The two that cost the most are **deterministic** failures re-run as though they were transient, and **plan** failures treated as tool failures. A compile error does not become a different compile error on the third attempt.
+
+> **Retry requires a reason why the next attempt can differ from the last one.** No reason, no retry.
+
 ---
 
 # 9. Recon: spend on information gain
@@ -250,6 +319,8 @@ The layer pays for itself through these six habits. They matter more than any th
 6. **Never re-read what is already in context.** If you are unsure whether you read it in *this* context, check — do not re-read speculatively.
 
 A budget that works in practice: **class S recon ≤ 2 rounds of batched probes**; more for class R or unfamiliar territory. Past that you are not gathering evidence, you are avoiding the decision.
+
+**Cost breaks ties; it never decides.** Choose the cheapest option *among those already safe enough* — never the cheapest option outright. Cost is the last filter applied to a set of acceptable choices, not a reason to accept a choice that was not acceptable. An agent that picks the cheap path while uncertain has not saved anything; it has moved the cost to whoever debugs the result.
 
 ---
 

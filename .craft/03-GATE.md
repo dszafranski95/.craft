@@ -1,6 +1,6 @@
 # 03-GATE.md — Craft Verification Gate
 
-**Version 2.2**
+**Version 3.0**
 
 > A change is complete only when it passes every **applicable** BLOCKER gate.
 >
@@ -206,6 +206,7 @@ A suppression is acceptable only when **all four** hold:
 - [ ] No test was weakened merely to accept unintended output.
 - [ ] No failing test was silently skipped, deleted or marked expected-to-fail.
 - [ ] **Each new test was observed to fail against broken behaviour** (or is a regression test that failed before the fix).
+- [ ] **The run being cited postdates the last change to the code under test** (§17.1).
 
 ## REQUIRED
 
@@ -371,7 +372,7 @@ Applies when an agent decided its own next steps — which, for any AI-assisted 
 - [ ] No Craft STOP condition was routed past. Confidence is not an override.
 - [ ] No destructive or irreversible operation was performed on the agent's own authority.
 - [ ] No risky mutation rests on a fast decision alone — class R changes were reasoned through and, where required, reviewed.
-- [ ] Every decision was taken against **current** state: no conclusion carried over a material change, no check reported as passing after a later edit invalidated it.
+- [ ] Every decision was taken against **current** state: no conclusion carried over a material change, no check cited after a later edit invalidated it (§17.1).
 - [ ] A repeated action or a repeated identical failure was escalated and replanned, not retried.
 - [ ] No hypothesis is presented as an observed fact.
 - [ ] No test, typecheck or build status was recorded from expectation rather than from an executed result (`02-PROTOCOL.md` §8).
@@ -422,6 +423,36 @@ Attach to any non-trivial change. This is the honest core of the gate.
 Levels: **E3** CI · **E2** executed locally, output observed · **E1** inspected by reading · **E0** not checked.
 
 Rule: **no claim above its evidence level.** An empty row is honest; a fabricated one is disqualifying.
+
+## 17.1 Evidence expires
+
+A check proves something about the code **as it was when the check ran**. The moment that code changes, the result stops being evidence and becomes history.
+
+> **Every row in the evidence table must postdate the last change it covers.**
+
+| Evidence | Invalidated by |
+|---|---|
+| file inspection | an edit to that file |
+| compile / typecheck | any source, type-definition or build-config change |
+| unit / integration tests | a change to the code under test, to those tests, or to their fixtures/config |
+| build / package | a source, build-config or dependency change |
+| lint / format | any change to the files covered |
+| security review or scan | a change to security-relevant code, config or dependencies |
+| benchmark | any change to the measured path, or a different environment |
+| "working tree clean" | any repository mutation |
+
+Keep this conservative and coarse. **Do not build dependency tracking** to prove a narrower invalidation — when in doubt, the evidence is stale and the check is re-run. Re-running a test suite is cheap; shipping on a result from three edits ago is not.
+
+The operational consequence is a sequencing rule:
+
+```text
+wrong:   run checks → fix the last review comment → report
+right:   fix everything → run checks → report
+```
+
+Verification is the **last** thing before reporting, not the first. If you edit anything after your final check — including a "trivial" rename or comment — the check is void and the report cannot cite it.
+
+> This is where honest agents most often produce a dishonest report: nothing was fabricated, the command really ran, the output was real. It just described code that no longer exists.
 
 ---
 
@@ -479,6 +510,7 @@ A change is "Craft Complete" only when:
 [ ] diff reviewed line by line
 [ ] documentation and contracts updated where behaviour changed
 [ ] evidence table filled honestly, including E0 rows
+[ ] every cited check postdates the last change it covers (§17.1)
 [ ] no claim in the report traces back to a decision rather than an executed check (Gate 13)
 [ ] remaining uncertainty, assumptions and follow-ups stated explicitly
 ```

@@ -1,6 +1,6 @@
 # decide/STATE.md — the decision state
 
-**Version 2.2** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
+**Version 3.0** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
 
 > **Do not load this file for a normal coding task.** It specifies a runtime, not your behaviour.
 
@@ -100,6 +100,37 @@ State must keep these four apart. Collapsing them is how an agent starts believi
 
 `verification` is likewise **written only by the runtime**, from real exit codes. A model must never be able to set `"tests": "passed"`. That is the difference between a verification record and a wish.
 
+## Working state is not the evidence log
+
+Two different things, kept apart:
+
+| | `evidence` — the observation log | `facts` / `hypotheses` — working state |
+|---|---|---|
+| Contains | what was actually observed, and when | what is currently believed to be true |
+| Mutability | append-only; entries are never edited | revised as understanding changes |
+| On a contradiction | keeps both observations | the belief is corrected or dropped |
+| On a code change | stays — it is history | entries covering the changed code expire (§4.1) |
+
+The evidence log is the audit trail: it answers *"what did we actually see, and when?"* The working state is the current picture: *"what do we think is true right now?"* Collapsing them means a revised belief silently rewrites the record that contradicted it — and then nothing can be reconstructed afterwards.
+
+## Every fact carries provenance
+
+A fact without provenance cannot be invalidated, because nothing knows what it depended on. The semantics each fact needs:
+
+```json
+{
+  "claim": "auth suite passes",
+  "source": "tool",                    // tool | repo | user | reasoner
+  "observed_at": "<step or timestamp>",
+  "scope": ["src/auth/**", "test/auth/**"],
+  "invalidated_by": ["change within scope"]
+}
+```
+
+A runtime need not store it this verbosely — but the four questions must be answerable: **what was claimed, who observed it, when, and what would make it untrue.**
+
+Note the `source` values and what they are worth. `tool` and `repo` are observations. `user` is a requirement or constraint. `reasoner` is an *inference* — it is only as good as the facts it was drawn from, and it expires when any of them does. A conclusion is never stronger than its weakest input.
+
 ---
 
 # 4. Updating
@@ -121,6 +152,30 @@ The update is mandatory before the next decision. A decision taken against stale
 | file edited | add to `changed_files`; set the affected `verification` entries back to `not_run` |
 
 That last row matters more than it looks: **editing a file invalidates every check that ran before the edit.** A runtime that keeps `"tests": "passed"` across a subsequent edit is reporting evidence it no longer has.
+
+## 4.1 Invalidation
+
+Expiry is mechanical, not a judgement call. On every mutation, walk the state and expire anything whose scope the mutation touched. The matrix is the same one the gate enforces — `../03-GATE.md` §17.1 is authoritative; this is how a runtime applies it:
+
+```text
+mutation                      expires
+─────────────────────────────────────────────────────────────
+edit any file             →   facts sourced from that file
+                              typecheck · lint · build · tests covering it
+                              any reasoner conclusion drawn from those facts
+                              "working tree clean"
+dependency change         →   build · tests · security scan
+config / env change       →   every check that read that config
+branch or checkout change →   effectively all of it — rebuild state
+```
+
+Three rules keep this honest and cheap:
+
+1. **Expire coarsely.** When it is unclear whether a fact survives, it does not. Re-observing is cheap; deciding on a stale fact is not. **Do not build dependency tracking** to keep a fact alive — that is a complicated way to be wrong occasionally.
+2. **Expire, do not delete.** An expired fact becomes an `unknown`, which is what drives the next action (§3). Silently dropping it makes the gap invisible.
+3. **Inferences expire with their inputs.** If a reasoner concluded "the client now sends the right token" from three facts and one of them expires, the conclusion expires too. Conclusions do not outlive their premises.
+
+> The failure this prevents: test passes → agent makes one more small edit → state still says `tests: passed` → agent reports done. Nothing was fabricated. The result was simply describing code that no longer existed.
 
 ## Confidence does not carry over
 

@@ -1,6 +1,6 @@
 # decide/POLICY.md — what the runtime is allowed to do with an answer
 
-**Version 2.2** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
+**Version 3.0** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
 
 > **Do not load this file for a normal coding task.** It specifies a runtime, not your behaviour.
 
@@ -31,6 +31,19 @@ if (action.destructive) return requireHumanApproval(action)
 ```
 
 Anything expressible as a deterministic rule must be a deterministic rule. Prompt text is what remains after that.
+
+## The permission envelope
+
+Policy authority and the current permission scope are two different gates, and both must open.
+
+```text
+provider says     edit_file, 0.99
+policy says       edit is permitted for this risk band
+permission says   this session has no write access
+result            not executed
+```
+
+**A provider can never widen its own permissions.** If the runtime is read-only, `edit_file` is not a slow path or a confirmation prompt — it is not an available answer at all (`DECISIONS.md` D-02). The answer space is built from what this session can actually do, so an unauthorised action is unrepresentable rather than merely refused.
 
 ---
 
@@ -71,8 +84,14 @@ below                <  0.70   → gather more evidence, or System 2
 Three conditions on their use:
 
 1. **A threshold without calibration data is a guess with a decimal point.** Before measurement, run every mutating decision through System 2 regardless of confidence.
-2. **A provider without logprobs has no confidence.** It gets the structured-output path and the conservative profile (`PROVIDERS.md` §2) — not an invented number.
+2. **A provider without logprobs has no confidence.** It runs at Tier B (`PROVIDERS.md` §2) — not an invented number.
 3. **Thresholds are per decision, per version, per provider.** `route.next/v1` at 0.90 on one model says nothing about `route.next/v1` on another.
+
+## Policy is versioned too
+
+The rules and thresholds in this file form a version — `policy/v1` — and every telemetry record stores it (`CALIBRATION.md` §2). Changing a threshold, reordering §2, or altering what a band permits produces `policy/v2`.
+
+Without it, a measured change in outcomes cannot be attributed: you will not know whether the agent got worse because the model changed, the decision criteria changed, or someone moved a threshold by 0.05.
 
 ---
 
@@ -92,7 +111,39 @@ These are not thresholds set very high. They are **not inputs to the decision sy
 
 ---
 
-# 5. Deterministic first
+# 5. Before a mutation: the action envelope
+
+`edit` is not an executable instruction. Before anything writes, the runtime must hold a bounded description of what is about to happen:
+
+```json
+{
+  "action": "edit_file",
+  "scope": ["src/auth/session.ts"],
+  "intent": "make the refreshed token canonical for the API client",
+  "expected_effect": "client sends the current session token on every request",
+  "verification": ["auth regression test", "typecheck"],
+  "risk": "moderate",
+  "reversible": true
+}
+```
+
+The fast provider does not produce this. It contributes at most `action`; the rest comes from deterministic classification, from System 2's design, or from the task contract (`../02-PROTOCOL.md` A1). The point is not the JSON — it is that **five questions have answers before a write happens**:
+
+```text
+what · where · why · what should change · how it will be checked
+```
+
+Three rules:
+
+1. **Scope is declared and enforced.** A write outside the declared scope is a policy violation, not a surprise. This is what stops an "edit one file" decision from becoming a nine-file refactor.
+2. **`verification` is chosen before the edit, not after.** Choosing the check after seeing the result is how you end up picking the check that passes.
+3. **An envelope that cannot be filled is not ready to execute.** If `expected_effect` cannot be stated, the change is not understood — the answer is `inspect`, not `edit` (`DECISIONS.md` D-05).
+
+This is deliberately the same discipline Craft already requires of a human making a change. The envelope only makes it machine-checkable.
+
+---
+
+# 6. Deterministic first
 
 Before any provider call, answer everything the runtime can answer itself:
 
@@ -110,7 +161,7 @@ Every question answered here is a provider call not made, a token not spent, and
 
 ---
 
-# 6. Escalation contract
+# 7. Escalation contract
 
 System 2 receives the state, the decision that triggered escalation, and the reason. It returns a patch, not a narrative:
 
@@ -135,7 +186,7 @@ Rules:
 
 ---
 
-# 7. Failure modes and their required behaviour
+# 8. Failure modes and their required behaviour
 
 | Failure | Required behaviour |
 |---|---|

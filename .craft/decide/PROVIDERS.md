@@ -1,6 +1,6 @@
 # decide/PROVIDERS.md — the provider interface
 
-**Version 2.2** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
+**Version 3.0** · Implementation contract for the Fast Decision Layer. Concept and agent behaviour: `../05-DECIDE.md`.
 
 > **Do not load this file for a normal coding task.** It specifies a runtime, not your behaviour.
 
@@ -23,11 +23,17 @@ FastDecisionProvider
   }
 
   capabilities() -> {
-    constrained_output   bool    can the answer space be enforced?
-    logprobs             bool    are token probabilities available?
+    structured_output    bool    can the answer be returned as a schema/enum?
+    constrained_output   bool    can the answer space be enforced at decode time?
+    logprobs             bool    are token probabilities available at all?
+    full_distribution    bool    for EVERY allowed label, or only a top-N list?
+    reasoning_toggle     bool    can extended thinking be turned off?
     batch                bool    can independent decisions share one call?
+    tokenizer            ref     needed to validate labels (§3)
   }
 ```
+
+Capabilities are **verified, not declared**. A provider that advertises `logprobs` but returns a top-5 list that omits half the answer space does not have `full_distribution`, and the adapter is responsible for discovering that before the runtime relies on it.
 
 Implementations may include a dedicated classifier, a local model with constrained decoding, a hosted model with structured output, or a rules engine. The runtime must not care which. Swapping providers is a configuration change; it must never be a redesign.
 
@@ -35,25 +41,32 @@ A provider that cannot answer returns nothing and the runtime applies the decisi
 
 ---
 
-# 2. Two capability profiles
+# 2. Capability tiers
 
-| | Full | Conservative |
-|---|---|---|
-| Requires | constrained output **and** logprobs | structured output only |
-| Returns | answer + distribution | answer only |
-| Numeric thresholds | permitted, after calibration | **forbidden** |
-| Direct action on confidence | permitted within `POLICY.md` | not permitted |
-| Mutating decisions | per policy | always via System 2 |
+Models differ in what they can actually guarantee. The runtime negotiates a tier from `capabilities()` and operates within it. It never assumes a capability it has not confirmed.
 
-The conservative profile is fully supported and is the correct default. A provider with no distribution still eliminates most unnecessary deliberation — which is where the savings are — it simply may not claim a probability it does not have.
+| | **Tier A** | **Tier B** | **Tier C** |
+|---|---|---|---|
+| Requires | constrained output **and** usable logprobs | structured / enum output | free text only |
+| Returns | answer + distribution | answer | answer, unvalidated |
+| Answer space enforced | by the decoder | by the schema | not enforced — must be parsed and checked |
+| Numeric thresholds | permitted, after calibration | **forbidden** | **forbidden** |
+| Direct action on confidence | per `POLICY.md` | not permitted | not permitted |
+| Routing read-only steps | yes | yes | yes, with validation |
+| Mutating decisions | per policy | always via System 2 | always via System 2 |
+| Out-of-space answer | cannot occur | rejected by schema | discard, use default, count as provider failure |
 
-Degrading to conservative must be automatic when `capabilities().logprobs` is false. It must never be a setting an operator can wrongly turn on.
+**Tier B is the sensible default and loses very little.** Most of the saving comes from not invoking deep reasoning on trivial steps, not from having a number attached to the answer.
+
+**Tier C is a genuine fallback, not a degraded Tier B.** Without enforcement the model can return anything, so every answer is validated against the answer space before use and a miss is a provider failure. Tier C gets no autonomy beyond read-only routing.
+
+Tier selection is **automatic and downward only**. If `capabilities().logprobs` is false the runtime is in Tier B or below, and no configuration flag may override that. A system that lets an operator assert Tier A on a Tier B provider will produce confident numbers that mean nothing.
 
 ---
 
 # 3. Building a provider from an ordinary LLM
 
-Any model that supports constrained decoding or grammar-restricted output can serve as a fast decision provider. Map the answer space onto single tokens:
+Any model that supports constrained decoding or grammar-restricted output can serve as a fast decision provider. Map the answer space onto short labels — then verify they really are single tokens for this model, because that is not guaranteed:
 
 ```text
 A = inspect        E = ask_user
@@ -90,12 +103,43 @@ The runtime maps `A → inspect` and hands the pair to `POLICY.md`. Without logp
 
 ## Why single tokens
 
-One output token is the whole point. It is the difference between a decision costing one token and a decision costing a paragraph of reasoning that nobody reads. The letters exist only because they are reliably single tokens; the model never sees them as meaningful labels, so the mapping must live in the runtime, not in the prompt.
+One output token is the whole point: it is the difference between a decision costing one token and one costing a paragraph of reasoning that nobody reads. The letters carry no meaning to the model — the mapping lives in the runtime, not in the prompt.
+
+## Validate the labels against the tokenizer
+
+**Do not assume a label is one token.** Whether `A` is a single token depends on the tokenizer, and on context — a leading space, a newline or a preceding character can change the segmentation. A label that splits into two tokens silently breaks the method: `max_tokens = 1` truncates the answer, and the logprob you read belongs to a fragment rather than to the choice.
+
+Before a provider is used, the adapter must confirm for each label:
+
+```text
+label → token ids → count == 1, in the position it will actually be emitted
+```
+
+If a label does not tokenise to one token, do one of these — never ignore it:
+
+1. pick different labels that do (verify again; do not assume digits or letters are safe);
+2. fall back to constrained structured output and take the answer without a distribution (Tier B);
+3. score the full label sequence properly, as a sum of log-probabilities over its tokens.
+
+Option 3 is correct but is no longer a one-token decision — count its real cost before choosing it.
+
+## Use the whole distribution or none of it
+
+Many backends return only `top_logprobs` for the top *N* tokens. If any allowed label is missing from that list, **you do not have a distribution over the answer space.**
+
+Renormalising over the labels that happen to appear invents precision: the missing mass is unknown, and the resulting number is not comparable to anything, including itself across calls.
+
+```text
+all allowed labels have a logprob   →  distribution available
+any label missing                   →  confidence unavailable, treat as Tier B
+```
+
+Take the answer, drop the confidence, and proceed conservatively. A missing number is an inconvenience; a fabricated one is a policy input that will eventually authorise something.
 
 ## Non-negotiables
 
-- **Letters are positional and must be stable within a decision version.** Reordering the mapping invalidates calibration as surely as changing the criteria (`DECISIONS.md` §4).
-- **Never allow free text.** Unconstrained output reintroduces parsing, latency and the failure modes this design exists to remove.
+- **Label order is part of the decision version.** Reordering the mapping invalidates calibration as surely as changing the criteria (`DECISIONS.md` §4).
+- **Never allow unvalidated free text above Tier C.** Unconstrained output reintroduces parsing, latency and the failure modes this design exists to remove.
 - **Never enable thinking on a fast decision.** A reasoning trace before a one-token answer costs more than the System 2 call it was meant to avoid.
 
 ---
@@ -131,8 +175,8 @@ Two constraints:
 | Situation | Reasonable choice |
 |---|---|
 | starting out, no infrastructure | none — the agent runs the loop itself (`../05-DECIDE.md`) |
-| local model already running | that model, constrained output, conservative profile |
-| cost-sensitive, high step count | smallest capable model with logprobs, full profile after calibration |
+| local model already running | that model, constrained output — Tier B |
+| cost-sensitive, high step count | smallest model with validated labels and full logprobs — Tier A after calibration |
 | decisions are the bottleneck | dedicated classifier trained on telemetry (`CALIBRATION.md`) |
 | regulated or audited environment | deterministic rules wherever possible; the model answers only residual cases |
 
