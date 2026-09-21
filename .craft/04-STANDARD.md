@@ -1,6 +1,6 @@
 # 04-STANDARD.md — The Craft Code Standard
 
-**Version 2.0** — universal engineering standard for human- and AI-written production code.
+**Version 2.2** — universal engineering standard for human- and AI-written production code.
 
 > This document defines **what good code is** and **why**.
 > `02-PROTOCOL.md` defines **how to work**. `03-GATE.md` defines **how to prove it**. `01-CARD.md` is the always-loaded summary.
@@ -522,6 +522,18 @@ Check every change for code it makes dead — and (Chesterton's Fence) confirm i
 - Prefer compile-time failure over runtime failure; runtime failure over silent wrong results.
 - Minimise what is observable (Hyrum's Law): what you expose, you will maintain forever.
 
+## 5.20 A decision system never lowers the standard
+
+Agents and automated tooling increasingly choose their own next step. That is a question of cost, not of licence: it changes how work is scheduled, never what the work must satisfy.
+
+- **Deterministic rules outrank probabilistic judgement.** Whatever code can decide, code decides. Asking a model a question the runtime has already answered adds cost and a failure mode, and removes nothing.
+- **Risk and reversibility control autonomy** — not how certain the actor feels. A one-character change to an authorisation predicate is not made safe by confidence (§8).
+- **Confidence is not evidence.** A probability is a statement about a model's preference, not about the world. Only executed checks establish that something works.
+- **A decision is not a result.** Choosing to act, and having acted correctly, are different claims with different proof requirements.
+- **Speed is bought from deliberation, never from engineering.** Skipping thought on a trivial routing step is efficiency; skipping recon, tests, review or the gate is slop with a faster clock.
+
+`05-DECIDE.md` specifies how to apply this in an agent loop. Nothing in it relaxes this document.
+
 ---
 
 # 6. AI slop: operational definition
@@ -616,6 +628,7 @@ Rejected as universal laws:
 - "A type checker proves correctness." / "Passing CI means the design is good."
 - "Premature optimisation is the root of all evil" used to justify an O(n²) loop over unbounded input.
 - "AI-generated means bad." / "Human-written means good."
+- "The model was 96% confident" offered as evidence that something works.
 
 Engineering judgment remains required.
 
@@ -639,6 +652,7 @@ A synthesis, not a claim that every source agrees with every rule.
 - Sandi Metz — *The Wrong Abstraction* — https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction
 - Titus Winters, Tom Manshreck, Hyrum Wright — *Software Engineering at Google*; Hyrum's Law — https://www.hyrumslaw.com/
 - Michael Feathers — *Working Effectively with Legacy Code* (characterisation tests, seams).
+- Daniel Kahneman — *Thinking, Fast and Slow* (the System 1 / System 2 split used in `05-DECIDE.md`).
 - Alexis King — *Parse, Don't Validate*.
 - Scott Meyers — *Making Interfaces Easy to Use Correctly and Hard to Use Incorrectly*.
 - Google Engineering Practices — https://github.com/google/eng-practices

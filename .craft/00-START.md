@@ -1,6 +1,6 @@
 # 00-START.md — Craft Code Standard: entry point
 
-**Version 2.1** · Read this file first. It routes everything else.
+**Version 2.2** · Read this file first. It routes everything else.
 
 ---
 
@@ -63,15 +63,17 @@ If `.craft/` cannot be read, say so in one line and stop. Never reconstruct the 
 
 # 3. Routing procedure
 
-The standard is five files. **Do not load all of them by default** — loading ~1,900 lines for a typo is exactly the ceremony this standard rejects.
+The standard is six files plus one optional folder. **Do not load all of them by default** — loading ~2,350 lines for a typo is exactly the ceremony this standard rejects.
 
 | File | Size | Role | Loaded |
 |---|---|---|---|
-| `00-START.md` | ~190 | routing only | always |
-| `01-CARD.md` | ~90 | laws, STOP list, authority order, evidence levels, section index | always |
-| `02-PROTOCOL.md` | ~460 | how to work: recon, implementation, AS-01…AS-20, reporting | when changing code |
-| `03-GATE.md` | ~500 | how to prove it: triage, gates, evidence table, done | before claiming done |
-| `04-STANDARD.md` | ~660 | what good code is: complexity, canon, principles | design & review |
+| `00-START.md` | ~200 | routing only | always |
+| `01-CARD.md` | ~110 | laws, STOP list, authority order, decision loop, evidence levels, section index | always |
+| `02-PROTOCOL.md` | ~470 | how to work: recon, implementation, AS-01…AS-20, reporting | when changing code |
+| `03-GATE.md` | ~530 | how to prove it: triage, gates, evidence table, done | before claiming done |
+| `04-STANDARD.md` | ~670 | what good code is: complexity, canon, principles | design & review |
+| `05-DECIDE.md` | ~370 | how to spend thinking: fast vs deep, anti-loop, autonomy | when looping or escalating |
+| `decide/` | ~830 | runtime contract for a fast decision provider | only when building one |
 
 Deterministic. Follow in order; stop at the first match.
 
@@ -112,10 +114,12 @@ If **any** of these is true, the change is **class R** regardless of how small i
 | Class | Load before writing | Load before completing |
 |---|---|---|
 | **T** | card only | nothing — self-check against the card |
-| **S** | card + `02-PROTOCOL.md` | `03-GATE.md` §1.1 → applicable gates → §18 |
-| **R** | card + `02-PROTOCOL.md` + `04-STANDARD.md` | `03-GATE.md` in full, plus §19 review prompt |
+| **S** | card + `02-PROTOCOL.md` | `03-GATE.md` §1.1 → applicable gates → §19 |
+| **R** | card + `02-PROTOCOL.md` + `04-STANDARD.md` | `03-GATE.md` in full, plus §20 review prompt |
 
 Design conversations, architecture questions and "should we do X?" load `04-STANDARD.md` regardless of class — that is the file that answers *why*.
+
+`05-DECIDE.md` is **not** part of any class tier. The decision loop it describes is on the card; load the file itself only when the loop is failing — you are repeating an action, a check keeps failing the same way, five steps have passed with no new fact — or when the human asks about agent autonomy. Load `decide/` only when building an agent runtime.
 
 ### Step 5 — Declare the decision in one line
 
@@ -143,6 +147,8 @@ Never continue at a lower tier because you already started at one.
 
 **Prefer section reads over file reads.** The card's index maps questions to anchors (`STANDARD` §5.6, `PROTOCOL` AS-12, `GATE` §8). Reading one section is the normal move; reading a whole file is for class R and for review.
 
+**Batch independent probes.** When the next few read-only actions do not depend on each other's results, issue them in one step. Collapsing *think → read → think → read* into *think → read ×3 → think* is the single largest saving available to an agent, and it costs nothing in rigour.
+
 **Working from memory is allowed for the card's ten laws only.** Everything below that level — a specific gate, an AS-rule, a threshold, the report format — is read, not recalled. If you cite a rule, cite its anchor so it can be checked.
 
 **Never reconstruct a missing file from memory.** Say which file you could not load, in one line, and work from the card.
@@ -162,6 +168,7 @@ Independent of routing:
 - Every new boundary must hide more than its interface costs.
 - Do not refactor unrelated code, and do not fix unrelated problems silently — report them.
 - Verify claims with tools; state the evidence level. If verification cannot be run, say so.
+- Do not deliberate over a question a tool already answered, and do not repeat an action that produced no new information — replan instead (`05-DECIDE.md` §8).
 - Review the final diff line by line.
 
 ## Completion

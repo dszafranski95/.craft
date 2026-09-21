@@ -1,7 +1,7 @@
 # 01-CARD.md — Craft working card (always loaded)
 
-**Version 2.1** · This is the **only** Craft file that should be in context by default.
-`04-STANDARD.md`, `02-PROTOCOL.md` and `03-GATE.md` are loaded on demand — routing rules in `00-START.md` §3.
+**Version 2.2** · This is the **only** Craft file that should be in context by default.
+`02-PROTOCOL.md`, `03-GATE.md`, `04-STANDARD.md` and `05-DECIDE.md` are loaded on demand — routing rules in `00-START.md` §3.
 If this card and a full file disagree, **the full file wins**. This card is a map, not a replacement.
 
 ---
@@ -47,6 +47,24 @@ Taste is never a reason on its own. *(`STANDARD` §1.2)*
 
 Everything else: decide, proceed, record the assumption in the report. *(`PROTOCOL` §3)*
 
+## Deciding what to do next — spend thinking where it pays
+
+```
+deterministic fact  →  fast decision  →  full reasoning  →  human authority
+```
+
+Answer every question at the cheapest level that answers it **correctly**. More expensive is waste; cheaper is slop.
+
+- **Never ask what a tool already answered.** Exit codes, file listings and type signatures are facts, not questions.
+- **Batch independent read-only probes** into one step, instead of think → read → think → read.
+- **Carry a compact state** — facts (each with its source) · unknowns · guesses (marked unproven) · counters — instead of re-reading the transcript.
+- **Escalate to full reasoning deterministically:** same action > 2 · same failure ≥ 2 · 5 steps with no new fact · two sources contradict · class R design · security, schema, money or personal data · about to suppress a checker. Then **replan, never retry.**
+- **Confidence is not evidence. Risk reduces autonomy.** Nothing unlocks a STOP, an irreversible operation, or completion without the gate.
+
+> **System 1 routes. System 2 solves. Craft governs. Evidence proves.**
+
+*(`05-DECIDE.md` — load only when looping, escalating, or building an agent runtime.)*
+
 ## Evidence levels — never claim above your level
 
 | | Meaning | Allowed wording |
@@ -87,6 +105,11 @@ Follow-ups:   <noticed and deliberately not done>        (if any)
 | Concrete anti-patterns (AS-01…AS-20) | `PROTOCOL` §5 |
 | Test strategy and what counts as proof | `PROTOCOL` §6 · `GATE` §8 |
 | Commit / diff hygiene | `PROTOCOL` §11 · `GATE` §13 |
-| Am I done? | `GATE` §1.1 triage → applicable gates → §18 |
-| Reviewing someone else's (or my own) diff | `GATE` §14, §19 |
+| Am I done? | `GATE` §1.1 triage → applicable gates → §19 |
+| Reviewing someone else's (or my own) diff | `GATE` §14, §20 |
 | Is this AI slop? | `STANDARD` §6–7 · `GATE` §14 |
+| How much should I think about this step? | `DECIDE` §0, §7 |
+| I am looping or repeating myself | `DECIDE` §8 |
+| What is worth inspecting next? | `DECIDE` §9 |
+| Am I allowed to do this without asking? | `DECIDE` §6 · `GATE` §15 |
+| Building an agent runtime around Craft | `DECIDE` §13 → `decide/` |

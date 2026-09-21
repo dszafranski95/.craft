@@ -23,7 +23,9 @@ your-project/
 │   ├── 01-CARD.md
 │   ├── 02-PROTOCOL.md
 │   ├── 03-GATE.md
-│   └── 04-STANDARD.md
+│   ├── 04-STANDARD.md
+│   ├── 05-DECIDE.md
+│   └── decide/          ← only needed if you build your own agent runtime
 ├── src/
 └── ...
 ```
@@ -72,7 +74,7 @@ Craft tells the assistant to:
 - show real evidence before saying the work is done;
 - keep unrelated code untouched.
 
-## Why there are five files
+## Why there are six files
 
 The assistant does not need every rule for every task. The numbered files make the reading order obvious and keep the context small.
 
@@ -83,6 +85,8 @@ The assistant does not need every rule for every task. The numbered files make t
 | [`.craft/02-PROTOCOL.md`](.craft/02-PROTOCOL.md) | How to inspect, change, and report work | When changing code |
 | [`.craft/03-GATE.md`](.craft/03-GATE.md) | How to verify the result | Before finishing a code change |
 | [`.craft/04-STANDARD.md`](.craft/04-STANDARD.md) | Full design and code-quality standard | Risky changes, design, and reviews |
+| [`.craft/05-DECIDE.md`](.craft/05-DECIDE.md) | How the assistant spends its thinking | When it gets stuck or repeats itself |
+| [`.craft/decide/`](.craft/decide/) | Technical contract for a custom agent runtime | Only if you are building one |
 
 ## How task routing works
 
@@ -93,6 +97,30 @@ For every new task, the assistant chooses a level:
 - **R — risky:** security, payments, personal data, migrations, public APIs, new dependencies, concurrency, or architecture.
 
 Small tasks stay fast. Risky tasks get more checks.
+
+## How the assistant decides what to do next
+
+Assistants waste most of their time and your tokens in the same two ways: thinking hard about trivial steps ("should I read this file?"), and repeating a failed action instead of changing the plan.
+
+Craft gives them a cost ladder:
+
+```text
+deterministic fact  →  fast decision  →  full reasoning  →  human authority
+```
+
+Each question is answered at the cheapest level that can answer it **correctly**. The assistant does not deliberate over facts a tool already gave it, it groups independent lookups into one step, and it keeps a short running summary of what it knows instead of re-reading the conversation.
+
+It also has hard limits. After the same action twice, the same failure twice, or five steps with nothing new learned, it must change the plan rather than try again — and if that fails too, it asks you.
+
+The rule this never breaks: **being confident is not the same as having checked.** No level of confidence lets it skip the verification gate, perform an irreversible operation on its own, or report something as tested that was not run.
+
+Full detail is in [`.craft/05-DECIDE.md`](.craft/05-DECIDE.md). You do not need to configure any of it.
+
+### If you are building your own agent
+
+[`.craft/decide/`](.craft/decide/) specifies the same layer as an implementable contract: the decision catalogue, the state payload, the policy rules, the provider interface, and how to calibrate a confidence threshold before trusting it.
+
+It is deliberately provider-neutral — a local model, a hosted one, or a dedicated classifier all satisfy it. Craft defines the contract; the provider implements it. If you are not building a runtime, ignore this folder entirely.
 
 ## Optional short prompt
 
@@ -154,6 +182,6 @@ Yes. Use the Project-local section in `00-START.md` for repository-specific comm
 
 ## Updating
 
-To update Craft later, download the newest version and replace the five files in your project's `.craft` folder. Keep a copy of your Project-local section first, then add it back to the new `00-START.md`.
+To update Craft later, download the newest version and replace the contents of your project's `.craft` folder. Keep a copy of your Project-local section first, then add it back to the new `00-START.md`.
 
 That is all: copy one folder, paste one prompt, and work normally.

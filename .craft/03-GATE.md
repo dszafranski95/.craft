@@ -1,13 +1,13 @@
 # 03-GATE.md — Craft Verification Gate
 
-**Version 2.0**
+**Version 2.2**
 
 > A change is complete only when it passes every **applicable** BLOCKER gate.
 >
 > Scores are diagnostic. A high score never overrides a blocker.
 > Conflicts are resolved by `04-STANDARD.md` §1.2.
 
-**When to load this file** *(routing: `00-START.md` §3)* — before declaring any class S or R change complete, and whenever reviewing a diff. Class S: read §1.1, then only the gates it selects, then §18. Class R: the whole file, plus the independent review prompt in §19. Not needed while exploring or designing.
+**When to load this file** *(routing: `00-START.md` §3)* — before declaring any class S or R change complete, and whenever reviewing a diff. Class S: read §1.1, then only the gates it selects, then §19. Class R: the whole file, plus the independent review prompt in §20. Not needed while exploring or designing.
 
 ---
 
@@ -28,7 +28,7 @@ Running twelve gates on a typo is ceremony, and ceremony is waste. Classify the 
 | Class | Examples | Gates applied |
 |---|---|---|
 | **T — Trivial** | comment, copy string, formatting confined to touched lines, obvious dead-code removal | Gate 0, Gate 5 (checkers pass), Gate 11 |
-| **S — Standard** | business logic, new endpoint, bug fix, compatible schema addition, refactoring | Gates 0–7, 11, 12 |
+| **S — Standard** | business logic, new endpoint, bug fix, compatible schema addition, refactoring | Gates 0–7, 11, 12, 13 |
 | **R — Risky** | auth/authz, payments, personal data, migrations, concurrency, cryptography, deletion, wire/public API contract, multi-tenant boundary, hot path | **All gates**, plus rollback plan, plus human review — never auto-accepted |
 
 If unsure between two classes, choose the higher one.
@@ -362,7 +362,32 @@ One item may be legitimate. **A cluster is a strong slop signal** — and the co
 
 ---
 
-# 15. Suggested automated pipeline
+# 15. Gate 13 — Agent autonomy and decision integrity
+
+Applies when an agent decided its own next steps — which, for any AI-assisted change, is always. It audits **how the work was driven**, not what the code does; the other gates cover the code. Definitions: `05-DECIDE.md`.
+
+## BLOCKER
+
+- [ ] No Craft STOP condition was routed past. Confidence is not an override.
+- [ ] No destructive or irreversible operation was performed on the agent's own authority.
+- [ ] No risky mutation rests on a fast decision alone — class R changes were reasoned through and, where required, reviewed.
+- [ ] Every decision was taken against **current** state: no conclusion carried over a material change, no check reported as passing after a later edit invalidated it.
+- [ ] A repeated action or a repeated identical failure was escalated and replanned, not retried.
+- [ ] No hypothesis is presented as an observed fact.
+- [ ] No test, typecheck or build status was recorded from expectation rather than from an executed result (`02-PROTOCOL.md` §8).
+- [ ] Model confidence appears nowhere as evidence of correctness.
+
+## REQUIRED
+
+- [ ] The work stopped and asked where the honest answer was "I cannot resolve this", rather than producing a plausible guess.
+- [ ] Assumptions made in place of missing facts are in the report, not left implicit.
+- [ ] Recon was proportional: enough to name the canonical owner of the changed data, not a sweep of the repository.
+
+> The failure this gate catches is specific: **the work looks complete because the agent was confident, not because anything was verified.** If any claim in the report traces back to a decision rather than to an executed check, it fails here.
+
+---
+
+# 16. Suggested automated pipeline
 
 Use the equivalents the repository actually defines in CI.
 
@@ -383,7 +408,7 @@ Order may be optimised for fast failure. Do not make slow, expensive checks mand
 
 ---
 
-# 16. Evidence table
+# 17. Evidence table
 
 Attach to any non-trivial change. This is the honest core of the gate.
 
@@ -400,7 +425,7 @@ Rule: **no claim above its evidence level.** An empty row is honest; a fabricate
 
 ---
 
-# 17. Craft score
+# 18. Craft score
 
 Diagnostic only, for review conversations. Never a substitute for blockers, and never a target — a score optimised for is a score destroyed.
 
@@ -434,7 +459,7 @@ Self-assessment by the author of the change is the weakest form of this score. T
 
 ---
 
-# 18. Definition of Done
+# 19. Definition of Done
 
 A change is "Craft Complete" only when:
 
@@ -454,12 +479,13 @@ A change is "Craft Complete" only when:
 [ ] diff reviewed line by line
 [ ] documentation and contracts updated where behaviour changed
 [ ] evidence table filled honestly, including E0 rows
+[ ] no claim in the report traces back to a decision rather than an executed check (Gate 13)
 [ ] remaining uncertainty, assumptions and follow-ups stated explicitly
 ```
 
 ---
 
-# 19. Independent review prompt
+# 20. Independent review prompt
 
 For a second pass — human or a separate model instance — with no memory of writing the code:
 
@@ -483,7 +509,7 @@ The value of this pass comes from the reviewer not being the author. Do not run 
 
 ---
 
-# 20. Merge question
+# 21. Merge question
 
 The final question is not:
 

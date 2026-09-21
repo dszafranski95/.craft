@@ -1,6 +1,6 @@
 # 02-PROTOCOL.md — Craft Engineering Protocol
 
-**Version 2.0** — mandatory operating instructions for coding agents.
+**Version 2.2** — mandatory operating instructions for coding agents.
 
 > This is the operational file: **how to work**. `04-STANDARD.md` says what good code is; `03-GATE.md` says how to prove it; `01-CARD.md` is the always-loaded summary.
 > Conflicts are resolved by the authoritative order in `04-STANDARD.md` §1.2 — not by preference.
@@ -103,6 +103,8 @@ Do not open a clarification round for cosmetic questions. Do not batch five triv
 ## Phase A — Reconnaissance
 
 **Budget:** recon is bounded. For a small change, a few targeted searches are enough. For a change in unfamiliar or high-risk territory, go deeper. Stop when you can state A1–A4 without guessing — not when you have read the whole repository.
+
+**Spend it on information gain.** Choose the probe that removes the most uncertainty, not the one that is easiest to run, and issue independent probes together rather than one at a time. Ordering and batching: `05-DECIDE.md` §9–10. Leave Phase A only when you can name the canonical owner of the data you are about to change; until then the answer to "enough to edit?" is no.
 
 ### A1. Task contract
 
@@ -213,6 +215,8 @@ Run the strongest checks available, in fast-failure order: format → lint → c
 **Before declaring a test suite meaningful, confirm the new test can fail.** Break the implementation once (or invert an assertion), observe red, restore, observe green. A test that has never been red proves nothing.
 
 If a check cannot be run in this environment, say which one and why (§8).
+
+**A failed check is diagnosed, not re-run.** Repeating a command is legitimate only when something changed that could plausibly change the outcome — a file edited, a dependency installed, an environment variable set. Re-running an unchanged command against an unchanged diagnosis is a loop, and after the second identical failure the required move is to replan, not to try again (`05-DECIDE.md` §8).
 
 ---
 
@@ -444,7 +448,7 @@ Never fabricate executed commands or results. Omit sections that are genuinely e
 
 # 13. The file set and how it is loaded
 
-This file is intentionally generic and is one of five:
+This file is intentionally generic and is one of six:
 
 | File | Role | Loaded |
 |---|---|---|
@@ -452,9 +456,10 @@ This file is intentionally generic and is one of five:
 | `02-PROTOCOL.md` | this file — how to work | when changing code (class S, R) |
 | `03-GATE.md` | how to prove it | before claiming completion; when reviewing |
 | `04-STANDARD.md` | what good code is, and why | class R, design decisions, review |
+| `05-DECIDE.md` | how to spend thinking; anti-loop and autonomy | when looping or escalating |
 | `00-START.md` / platform loader | routing only | always |
 
-**Do not load the whole set by default.** Loading 1,900 lines for a one-line fix is the same category of waste as the over-engineering this file forbids. The routing procedure lives in `00-START.md` §3 and is deterministic: classify the change (T / S / R), load the tier, escalate immediately if a mandatory trigger fires mid-task, and never re-read a file already in context.
+**Do not load the whole set by default.** Loading 2,350 lines for a one-line fix is the same category of waste as the over-engineering this file forbids. The routing procedure lives in `00-START.md` §3 and is deterministic: classify the change (T / S / R), load the tier, escalate immediately if a mandatory trigger fires mid-task, and never re-read a file already in context.
 
 Working from memory is acceptable only for the card's ten laws. A specific gate, an AS-rule, a threshold or the report format is **read, not recalled** — and cited by anchor (`PROTOCOL` AS-12, `GATE` §8) so it can be checked.
 
